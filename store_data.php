@@ -52,35 +52,35 @@ $rawData = array(
 	),
 );
 
-# Ouverture DB
+# Opening local DB
 $connexion=new mysqli("localhost","root","--somepwd--","repart");
 if($connexion->connect_errno) {
-	printf("Echec de la connexion:\n%s",$connexion->connect_error);
+	printf("Connexion failed:\n%s",$connexion->connect_error);
 	exit();
 }
 $connexion->query("SET NAMES utf8");
 
 $connexion->query("DELETE FROM ClassesCombi");
 
-foreach($rawData as $heures=>$liste_classes) {
-	foreach($liste_classes as $idx=>$classe) {
-		$dotidx = strpos($classe,".");
-		$type = substr($classe, 0, $dotidx);
+foreach($rawData as $hours=>$liste_classes) {
+	foreach($liste_classes as $idx=>$course) {
+		$dotidx = strpos($course,".");
+		$type = substr($course, 0, $dotidx);
 		if($dotidx==0) {
-			$type=$classe;
+			$type=$course;
 		}
+		
 		$query =
 			"INSERT INTO ClassesCombi VALUES (".
 			"\"".$type."\",".
-			"\"".$classe."\",".
-			round(eval("return ".$heures.";"),3).
+			"\"".$course."\",".
+			round(eval("return ".$hours.";"),3).
 			")";
-		# printf("query: %s\n",$query);
 		$connexion->query($query);
 		if($connexion->connect_errno) {
 			printf(
-				"Échec insertion de la classe %n:\n%n\n",
-				$classe,$connexion->connect_error
+				"Failed inserting course %n:\n%n\n",
+				$course,$connexion->connect_error
 			);
 		};
 	}
@@ -88,7 +88,7 @@ foreach($rawData as $heures=>$liste_classes) {
 
 printf("Done.");
 
-# Fermeture DB
+# Closing local DB
 $connexion->close();
 
 ?>

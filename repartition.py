@@ -1,6 +1,21 @@
-# A cause que Python y passe les variab' par adresse:
+# OBJECTIVE:
+# Assign to each section in lecturesData a teacher in profsData, such that
+# the total teaching duration for each teach' is between its max and min.
+#
+# Considered constraints are all related to total durations,
+# thus lecturesData is structured around durations, and not sections,
+# which are interchangeable within a given duration.
+#
+# Technically speaking, we wish to expand a map {Sections}->{Teachers}
+# which is already partially defined by the teachers' wishes.
+
+
+# Globals ----------------------------------------------------------------------
 from copy import deepcopy as clone
 from json import dumps
+from functools import reduce
+
+digits = 3
 
 def printf(obj):
     """ Print JSON object sweetly """
@@ -8,240 +23,275 @@ def printf(obj):
         dumps(obj, indent = 4, separators=(",",": ") )
     )
 
-# Globales
-digits = 3
+def reround(x):
+    if type(x) in [int, float]:
+        return round(x, digits)
+    return round(eval(x), digits)
 
 
-# Données classes
-dureesRaw = {
-    "6.6+4/3*1.1":
-        ["TS.1+AP", "TS.2+AP"],
-    "5.5":
-        ["1S.+AP", "1S.SES+AP"],
-    "4.4+2/3*1.1":
-        ["TES.2+AP"],
-    "5":
-        ["2nde.1+AP", "2nde.2+AP", "2nde.3+AP",
-         "2nde.4+AP", "2nde.5+AP", "2nde.6+AP",
-         "SIO.1.1", "SIO.1.2", "SIO.2.1.UF2" ],
-    "4.4+1/3*1.1":
-        ["TES.1+AP"],
-    "3.3":
-        ["1ES.LES", "1ES", "1ES.SES", "1ST2S",
-         "1STMG.1", "1STMG.2", "TST2S"],
-    "3":
-        ["Prépa"],
-    "2.5":
-        ["SIO.2.2.UF2"],
-    "2.2":
-        ["TS.SpéM", "TSTMG.1", "TSTMG.2"],
-    "1.65":
-        ["TES.SpéM"],
-    "1.5":
-        ["MPS"],
-    "1.25":
-        ["SIO.1.Algo1", "SIO.1.Algo2", "SIO.1.Algo3"],
-    "1.1":
-        ["TS.ISN"],
-    "0.75":
-        ["ICN"],
-    "0.55":
-        ["1S.TPE", "1S.SES.TPE"]
-}
+# Sections data ----------------------------------------------------------------
+lecturesDataRaw = [
+    {
+        "duration": "6.6+4/3*1.1",
+        "sections": ["TS.1+AP", "TS.2+AP"]
+    }, {
+        "duration": "5.5",
+        "sections": ["1S.+AP", "1S.SES+AP"]
+    }, {
+        "duration": "4.4+2/3*1.1",
+        "sections": ["TES.2+AP"]
+    }, {
+        "duration": "5",
+        "sections": ["2GT.1+AP", "2GT.2+AP", "2GT.3+AP",
+                    "2GT.4+AP", "2GT.5+AP", "2GT.6+AP",
+                    "SIO.1.1", "SIO.1.2", "SIO.2.1.UF2"]
+    }, {
+        "duration": "4.4+1/3*1.1",
+        "sections": ["TES.1+AP"]
+    }, {
+        "duration": "3.3",
+        "sections": ["1ES", "1ES.LES", "1ES.SES",
+                    "1ST2S", "1STMG.1", "1STMG.2", "TST2S"]
+    }, {
+        "duration": "3",
+        "sections": ["Prépa"]
+    }, {
+        "duration": "2.5",
+        "sections": ["SIO.2.2.UF2"]
+    }, {
+        "duration": "2.2",
+        "sections": ["TS.SpéM", "TSTMG.1", "TSTMG.2"]
+    }, {
+        "duration": "1.65",
+        "sections": ["TES.SpéM"]
+    }, {
+        "duration": "1.5",
+        "sections": ["2GT.MPS"]
+    }, {
+        "duration": "1.25",
+        "sections": ["SIO.1.Algo1", "SIO.1.Algo2", "SIO.1.Algo3"]
+    }, {
+        "duration": "1.1",
+        "sections": ["TS.ISN"]
+    }, {
+        "duration": "0.75",
+        "sections": ["2GT.ICN"]
+    }, {
+        "duration": "0.55",
+        "sections": ["1S.SES.TPE", "1S.TPE"]
+    }
+]
 
-def getTag(classStr):
-    """ Identify type of class from class code """
+def getTag(sectionStr):
+    """ Identify type of section from section identifier """
     # Currently unused (php inheritance)
-    idx = classStr.find(".")
+    idx = sectionStr.find(".")
     if idx==-1:
-        return classStr
-    return classStr[:idx]
+        return sectionStr
+    return sectionStr[:idx]
 
-def revertObj(obj):
-    """ revert object {duration=>list_of_classes} to {classes=>duration} """
-    revert = {}
-    for key, list_of_values in obj.items():
-        for value in list_of_values:
-            revert[value] = eval(key)
-    return revert
-classes = revertObj(dureesRaw)
+def setOfSections(lecturesData):
+    """ Generates the set of sections from lecturesData """
+    sections = {}
+    for idx, lecture in enumerate(lecturesData):
+        for section in lecture["sections"]:
+            sections[section] = ""
+    return sections
 
-totalHeuresDues = 0
-for key, list_of_values in dureesRaw.items():
-    totalHeuresDues += eval(key)*len(list_of_values)
-print("Heures Dues:", round(totalHeuresDues,digits), "h")
+totalDueHours = 0
+for idx, lecture in enumerate(lecturesDataRaw):
+    duration = reround(lecture["duration"])
+    totalDueHours += duration*len(lecture["sections"])
+print("Due hours:", reround(totalDueHours), "h")
 
 
-# Données profs
-profsRaw = {
+# Teachers data ----------------------------------------------------------------
+profsDataRaw = {
     "CB":  {
         "min": 15, "max": 16,
-        "service": ["TS.1+AP"]
+        "wish": ["TS.1+AP"]
     },
     "MC":  {
         "min": 15, "max": 17,
-        "service": ["TS.2+AP"]
+        "wish": ["TS.2+AP"]
     },
     "CG":  {
         "min": 15, "max": 17,
-        "service": []
+        "wish": []
     },
     "NR":  {
         "min": 15, "max": 17,
-        "service": ["SIO.1.1"]
+        "wish": ["SIO.1.1"]
     },
     "SR":  {
         "min": 18, "max": 19,
-        "service": []
+        "wish": []
     },
     "JPR": {
         "min": 15, "max": 16,
-        "service": ["2nde.2+AP", "2nde.3+AP"]
+        "wish": ["2nde.2+AP", "2nde.3+AP"]
     },
     "PV":  {
         "min": 15, "max": 17,
-        "service": ["SIO.1.2"]
+        "wish": ["SIO.1.2"]
     },
     "BMP": {
         "min": 18, "max": 19,
-        "service": []
+        "wish": []
     }
 }
 
-minServices = 0
-maxServices = 0
-for prof in profsRaw:
-    minServices += profsRaw[prof]["min"]
-    maxServices += profsRaw[prof]["max"]
+availableMin = 0
+availableMax = 0
+for prof in profsDataRaw:
+    availableMin += profsDataRaw[prof]["min"]
+    availableMax += profsDataRaw[prof]["max"]
 print(
-    "Totaux services: entre",
-    round(minServices, digits),"h",
-    "et",
-    round(maxServices, digits),"h"
+    "Total available services: from",reround(availableMin),"h",
+    "to",reround(availableMax),"h"
 )
 
 
-# TODO
-def popOut(durees, classe):
-    # Pour être plus pythonique: remplacer le breakout par une fonction
-    pass
-# /TODO
+# Update data from teachers' wishes --------------------------------------------
+def findAndPop(lecturesData, section):
+    """ looks for section in lecturesData, pops it out,
+        and returns its duration """
+    for idx, lecture in enumerate(lecturesData):
+        if lecture["sections"].count(section):
+            lecture["sections"].pop(
+                lecture["sections"].index(section)
+            )
+            duration = reround(lecture["duration"])
+            if not lecture["sections"]:
+                lecturesData.pop(idx)
+            return duration
+    return 0
 
-def majDonnes(profsRaw, dureesRaw):
-    profs = clone(profsRaw)
-    durees = clone(dureesRaw)
-    for prof in profsRaw:
-        if profsRaw[prof]["service"]:
-            for classe in profsRaw[prof]["service"]:
-                breakOut = False
-                for duree in durees:
-                    if durees[duree].count(classe):
-                        profs[prof]["min"] -= round(eval(duree),digits)
-                        profs[prof]["max"] -= round(eval(duree),digits)
-                        durees[duree].pop(durees[duree].index(classe))
-                        if len(durees[duree])==0:
-                            del durees[duree]
-                        breakOut = True
-                        break
-                if breakOut:
-                    break
-    return [durees, profs]
-data = majDonnes(profsRaw, dureesRaw)
-durees = data[0]
-profs = data[1]
+def updateData(profsDataRaw, lecturesDataRaw):
+    """ Update data from teachers' wishes """
+    profsData = clone(profsDataRaw)
+    lecturesData = clone(lecturesDataRaw)
+    for prof in profsDataRaw:
+        if profsDataRaw[prof]["wish"]:
+            for section in profsDataRaw[prof]["wish"]:
+                durationOfThis = findAndPop(lecturesData, section)
+                profsData[prof]["min"] = reround(
+                    profsData[prof]["min"]-durationOfThis
+                )
+                profsData[prof]["max"] = reround(
+                    profsData[prof]["max"]-durationOfThis
+                )
+    return [profsData, lecturesData]
 
-
+data = updateData(profsDataRaw, lecturesDataRaw)
+profsData = data[0]
+lecturesData = data[1]
 
 absolMax = 0
 absolMin = 100
-for prof in profs:
-    absolMax = max( absolMax, profs[prof]["max"] )
-    absolMin = min( absolMin, profs[prof]["min"] )
+for prof in profsData:
+    absolMax = max( absolMax, profsData[prof]["max"] )
+    absolMin = min( absolMin, profsData[prof]["min"] )
 print("Attribution Min:", absolMin, "h")
 print("Attribution Max:", absolMax, "h")
 
 
-# Calcul des combinaisons de durées
-def qteDurees(durees):
-    qtes = {}
-    for duree in durees:
-        qtes[duree] = len(durees[duree])
-    return qtes
+# Compute possible partitions --------------------------------------------------
+# A teacher's service may be viewed as a map:
+# {durations} -> N
+#  duration  |-> number of sections w/ this duration affected to this teacher
+# The set {durations} is indexed by the lecturesData index,
+# thus a teacher's service may be viewed as a map in coordinates: {indices of durations}->N
+# Here we compute all such possible maps
+class Coordinates:
+    def __init__(self, maxCoords, weights):
+        self.len = min(len(maxCoords), len(weights))
+        self.maxCoords = maxCoords
+        self.weights = weights
+        self.coords = [0 for i in range(self.len)]
+    def __str__(self):
+        return str(self.coords)
+    def weight(self):
+        weight = 0
+        for i in range(self.len):
+            weight += self.coords[i]*self.weights[i]
+        return reround(weight)
+    def maxWeight(self, m=0):
+        weight = 0
+        for i in range(m, self.len):
+            weight += self.maxCoords[i]*self.weights[i]
+        return reround(weight)
+    def downMax(self):
+        i=0
+        while(self.maxCoords[i]==0):
+            i += 1
+            if i==self.len:
+                return False
+        self.coords = [0 for x in range(self.len)]
+        self.maxCoords[i] = 0
+        return i+1
+    def up(self):
+        i = 0
+        while(self.coords[i]==self.maxCoords[i]):
+            self.coords[i] = 0
+            i += 1
+            if i==self.len:
+                return False
+        self.coords[i] += 1
+        return True
 
-## TODO
-class basicCombination:
-    def __init__(self, combi, qte):
-        self.combi = combi  # list of durations
-        self.qte = qte
+# DEBUG
+matchingPartitions = [
+    # {
+    # "coords":
+    # "profs":
+    # }
+]
 
-class Combination:
-    def __init__(self, nbCombis, listeCombis, usedObj):
-        self.nbCombis = nbCombis
-        self.listeCombis = listeCombis  # list of basicCombination-s
-        self.used = usedObj
-## /TODO
+profsPartitions = {}
+for prof in profsData:
+    profsPartitions[prof] = []
 
-def initCombis(durees):
-    combis = {}
-    for key in durees:
-        str_key = str(round(eval(key),digits))
-        combis[str_key] = {
-            "listeCombis": [{
-                "combi": [key],
-                "qte": len(durees[key]),
-            }],
-            "nbCombis": len(durees[key]),
-            "used": { str_key: 1 }
-        }
-    return combis
+maxCoordinates = [
+    min( len(lecturesData[x]["sections"]), int(absolMax//eval(lecturesData[x]["duration"])) )
+    for x in range(len(lecturesData))
+]
 
-def combine(combis, durees, dureeMax):
-    newCombis = {}
-    for dureeCombi in combis:
-        combi = combis[dureeCombi]  # Combination type
-        for duree in durees:
-            if hasattr(combi["used"], duree):
-                if combi["used"][duree] >= len(durees[duree]):
-                    print(combi["used"][duree],">=len(durees[",duree,"], skipping...")
-                    continue
-            dureeNewCombi = round(eval(dureeCombi)+eval(duree),digits)
-            if dureeNewCombi > dureeMax:
-                continue
-            key = str(dureeNewCombi)
-            if not hasattr(newCombis, key):
-                newCombis[key] = {
-                    "listeCombis": [],
-                    "nbCombis": 0,
-                    "used": {}
+weights = [ reround(lecturesData[x]["duration"]) for x in range(len(lecturesData)) ]
+# /DEBUG
+
+def computePossiblePartitions(
+    matchingPartitions, profsPartitions, maxCoordinates, weights,
+    profsData, lecturesData, absolMin, absolMax
+    ):
+    
+    c = Coordinates(maxCoordinates, weights)
+    idx = 0
+    totalMatches = 0
+    while(c.maxWeight(idx)>=absolMin):
+        while c.up():
+            weight = c.weight()
+            if absolMin <= weight <= absolMax:
+                partition = {
+                    "coords": clone(c.coords),
+                    "profs": []
                 }
-            if not hasattr(newCombis[key]["used"], duree):
-                newCombis[key]["used"][duree] = 0
-            used = 0
-            if hasattr(combi["used"], duree):
-                used = combi["used"][duree]
-            newCombis[key]["nbCombis"] += combi["nbCombis"]*(len(durees[duree])-used)
-            for i in range(len(combi["listeCombis"])):
-                newCombis[key]["listeCombis"] += [{
-                    "combi": clone(combi["listeCombis"][i]["combi"]) + [duree],
-                    "qte": combi["listeCombis"][i]["qte"]*(len(durees[duree])-used)
-                }]
-            newCombis[key]["used"][duree] += used+1
-    return newCombis
-
-def calculeCombinaisons(durees, dureeMax, n):
-    combinaisons = [{} for i in range(n+1)]
-    combinaisons[0] = initCombis(durees)
-    print("Initializing with",len(combinaisons[0]),"durations")
-    for i in range(n):
-        combinaisons[i+1] = combine(combinaisons[i], durees, dureeMax)
-        print(len(combinaisons[i+1]),"partitions of length",i+1,"found")
-        if not combinaisons[i+1]:
+                for prof in profsData:
+                    if profsData[prof]["min"] <= weight <= profsData[prof]["max"]:
+                        partition["profs"] += [prof]
+                        profsPartitions[prof] += [clone(c.coords)]
+                        matchingPartitions += [clone(partition)]
+                        totalMatches += 1
+        idx = c.downMax()
+        print("Done with idx =",idx-1)
+        if not idx:
             break
-    return combinaisons
+    print("Found",totalMatches,"matches in total")
+    for prof in profsData:
+        print("   *",len(profsPartitions[prof]),"for",prof)
+    print("")
 
-def unGrading(combinations):
-    pass
-        
-
-combinaisons = calculeCombinaisons(durees, absolMax, 50)
-
+computePossiblePartitions(
+    matchingPartitions, profsPartitions, maxCoordinates, weights,
+    profsData, lecturesData, absolMin, absolMax
+)
