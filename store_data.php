@@ -79,7 +79,7 @@ foreach($rawData as $hours=>$liste_classes) {
 		$connexion->query($query);
 		if($connexion->connect_errno) {
 			printf(
-				"Failed inserting course %n:\n%n\n",
+				"Failed inserting course %s:\n%s\n",
 				$course,$connexion->connect_error
 			);
 		};

@@ -4,7 +4,7 @@ header("Content-Type: text/plain; charset=utf-8");
 # Opening local DB
 $connexion=new mysqli("localhost","root","--somepwd--","repart");
 if($connexion->connect_errno) {
-	printf("Echec de la connexion:\n%s",$connexion->connect_error);
+	printf("Connexion failed:\n%s",$connexion->connect_error);
 	exit();
 }
 $connexion->query("SET NAMES utf8");
