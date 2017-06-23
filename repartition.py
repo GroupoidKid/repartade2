@@ -230,10 +230,12 @@ class Coordinates:
         self.coords = [0 for x in range(self.len)]
         self.maxCoords[i] = 0
         return i+1
-    def up(self):
+    def up(self, forceIdx=-1):
         i = 0
         while(self.coords[i]==self.maxCoords[i]):
             self.coords[i] = 0
+            if(i==forceIdx):
+                self.coords[i] = 1
             i += 1
             if i==self.len:
                 return False
@@ -269,7 +271,7 @@ def computePossiblePartitions(
     idx = 0
     totalMatches = 0
     while(c.maxWeight(idx)>=absolMin):
-        while c.up():
+        while c.up(idx):
             weight = c.weight()
             if absolMin <= weight <= absolMax:
                 partition = {
